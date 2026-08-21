@@ -91,6 +91,38 @@ class LayoutKeyTest < ActiveSupport::TestCase
     assert ResourceTable.layout_key_valid?("BookResource/index")
   end
 
+  # Tests for layout_resource_class — the single resolution path
+  # layout_key_valid? is expressed in terms of.
+
+  test "layout_resource_class returns the class for a valid key" do
+    assert_equal @resource_class, ResourceTable.layout_resource_class("BookResource/index")
+  end
+
+  test "layout_resource_class returns nil for each invalid key shape" do
+    [
+      nil,
+      :symbol,
+      {},
+      42,
+      [],
+      "BookResourceindex",
+      "//",
+      "BookResource/index/extra",
+      "BookResource/show",
+      "BookResource/",
+      "BookResource/../../etc",
+      "Book/index",
+      "Admin::BookResource/index",
+      "Book-Resource/index",
+      "bookResource/index",
+      "NoSuchResource/index",
+      "ImposterResource/index"
+    ].each do |invalid_key|
+      assert_nil ResourceTable.layout_resource_class(invalid_key),
+                 "Should return nil for #{invalid_key.inspect} (#{invalid_key.class})"
+    end
+  end
+
   # Tests for layout_key method
 
   test "layout_key builds key from resource class and default view" do

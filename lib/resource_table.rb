@@ -23,19 +23,28 @@ module ResourceTable
       "#{resource_class.name}/#{view}"
     end
 
+    # The resource class named by a layout key, or nil if the key does not
+    # name one. The single place a key is resolved to a constant — callers
+    # that need the class (the controller) and callers that only need a yes/no
+    # (layout_key_valid? below) both go through here, so the two cannot drift
+    # apart the way two separate resolutions of the same string could.
+    def layout_resource_class(key)
+      return nil unless key.is_a?(String)
+
+      resource_name, view = key.split("/", 2)
+      return nil unless view == "index"
+      return nil unless resource_name&.match?(/\A[A-Z][A-Za-z0-9]*#{Regexp.escape(ResourceCore.config.resource_class_suffix)}\z/)
+
+      klass = resource_name.safe_constantize
+      return nil if klass.nil? || !klass.is_a?(Class)
+      # Module#<= yields nil for an unrelated class; coerce so we always return a Class or nil.
+      klass <= ResourceCore::BaseResource ? klass : nil
+    end
+
     # Whether a key names a resource that actually exists. An unvalidated key
     # lets a request write arbitrary rows into a user's settings table.
     def layout_key_valid?(key)
-      return false unless key.is_a?(String)
-
-      resource_name, view = key.split("/", 2)
-      return false unless view == "index"
-      return false unless resource_name&.match?(/\A[A-Z][A-Za-z0-9]*#{Regexp.escape(ResourceCore.config.resource_class_suffix)}\z/)
-
-      klass = resource_name.safe_constantize
-      return false if klass.nil? || !klass.is_a?(Class)
-      # Module#<= yields nil for an unrelated class; coerce so the predicate always answers a boolean.
-      (klass <= ResourceCore::BaseResource) || false
+      !layout_resource_class(key).nil?
     end
   end
 end
