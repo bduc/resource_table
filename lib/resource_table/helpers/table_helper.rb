@@ -10,10 +10,18 @@ module ResourceTable
       #
       # Anything not consumed here is handed to the presenter as options, which
       # is how a call-site-varying cell (`global_tab`) reaches a cell_ method.
+      #
+      # table: lets a caller that already built a Table (typically a
+      # controller reading table.sort.order_clause before querying) hand it
+      # straight to the view. Without it, that controller's Table and this
+      # method's own would be two separate objects — built from two separate
+      # layout-store reads — that have to agree on the same request. Passing
+      # one in skips both: no second Table is constructed, and the store is
+      # never read here.
       def resource_table_for(collection, resource: nil, presenter: nil, key: nil,
-                             layout: nil, view: :index, **options, &block)
+                             layout: nil, view: :index, table: nil, **options, &block)
         presenter_class = presenter || ResourceTable::Presenter
-        resource_class  = resource || presenter_class.resource
+        resource_class  = resource || presenter_class.resource || table&.resource_class
 
         unless resource_class
           raise ArgumentError,
@@ -22,16 +30,14 @@ module ResourceTable
         end
 
         key ||= ResourceTable.layout_key(resource_class, view)
-        layout = resource_table_layout(key) if layout.nil?
+
+        table ||= begin
+          layout = resource_table_layout(key) if layout.nil?
+          ResourceTable::Table.new(resource_class: resource_class, layout: layout, params: params)
+        end
 
         builder = ResourceTable::Builder.new
         block&.call(builder)
-
-        table = ResourceTable::Table.new(
-          resource_class: resource_class,
-          layout: layout,
-          params: params
-        )
 
         render partial: "resource_table/daisyui/table/table", locals: {
           table: table,

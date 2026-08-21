@@ -155,6 +155,40 @@ class TableHelperTest < ActionView::TestCase
     assert_includes resource_table_for(books, resource: BookResource), "Dune"
   end
 
+  # --- table: -----------------------------------------------------------
+  #
+  # A caller (typically a controller building a Table up front to read
+  # table.sort.order_clause before querying) may pass its own Table in, so
+  # the view does not construct a second one — and read the layout store a
+  # second time — for the same request.
+
+  class RaisingStore
+    def read(*) = raise "layout store should not be read when table: is given"
+    def write(*) = raise "layout store should not be written by resource_table_for"
+  end
+
+  test "passing table: uses it instead of building one" do
+    table = ResourceTable::Table.new(
+      resource_class: BookResource,
+      layout: { "visible" => %w[title] },
+      params: {}
+    )
+
+    render_result = resource_table_for(books, resource: BookResource, table: table)
+
+    assert_includes render_result, 'data-column="title"'
+    refute_includes render_result, 'data-column="pages"'
+  end
+
+  test "passing table: performs no layout-store read" do
+    ResourceTable.config.layout_store = RaisingStore.new
+    table = ResourceTable::Table.new(resource_class: BookResource, layout: nil, params: {})
+
+    render_result = resource_table_for(books, resource: BookResource, table: table)
+
+    assert_includes render_result, "Dune"
+  end
+
   # --- params ----------------------------------------------------------
   #
   # Table.new(params: params) receives ActionController::Parameters in
