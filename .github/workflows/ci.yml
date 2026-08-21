@@ -20,10 +20,10 @@ jobs:
       RAILS_ENV: test
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/resource_table_test
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: resource_table
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: bduc/resource_core
           path: resource_core
@@ -39,7 +39,7 @@ jobs:
   javascript:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "26"
@@ -48,10 +48,10 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           path: resource_table
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: bduc/resource_core
           path: resource_core
