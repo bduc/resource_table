@@ -62,7 +62,8 @@ module ResourceTable
     # unless the object has been permitted. Reaching for #to_unsafe_h is correct
     # precisely because nothing here is trusted: "sort" must match a column the
     # resource DECLARED sortable, and "dir" is whitelisted against two literals.
-    # Nothing else in the payload is read at all.
+    # Only "sort" and "dir" may ever be read from this hash — reading any other
+    # key here means revisiting the #to_unsafe_h decision above.
     def self.normalize(params)
       return {} if params.nil?
 

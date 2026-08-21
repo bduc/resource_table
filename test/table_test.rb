@@ -153,6 +153,14 @@ class TableTest < ActiveSupport::TestCase
     refute ResourceTable::Column.new(name: :title, spec: { index: { sortable: false } }).sortable?
   end
 
+  test "sortable: a blank string is not sortable" do
+    refute ResourceTable::Column.new(name: :title, spec: { index: { sortable: "" } }).sortable?
+  end
+
+  test "sortable: a whitespace-only string is not sortable" do
+    refute ResourceTable::Column.new(name: :title, spec: { index: { sortable: "   " } }).sortable?
+  end
+
   test "value_spec merges the index format over the field format" do
     column = ResourceTable::Column.new(name: :price, spec: { format: :plain, index: { format: :currency } })
 

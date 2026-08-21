@@ -18,6 +18,15 @@ class SortTest < ActiveSupport::TestCase
     assert_nil sort.order_clause
   end
 
+  test "a column declared sortable: '' cannot be selected by a sort param" do
+    blank_sortable = [ ResourceTable::Column.new(name: :x, spec: { index: { sortable: "" } }) ]
+
+    sort = ResourceTable::Sort.from_params({ "sort" => "x" }, blank_sortable)
+
+    refute sort.active?
+    assert_nil sort.order_clause
+  end
+
   test "a sort param naming no column at all is rejected" do
     sort = ResourceTable::Sort.from_params({ "sort" => "password_digest" }, columns)
 

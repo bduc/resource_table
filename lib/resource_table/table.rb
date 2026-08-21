@@ -28,6 +28,10 @@ module ResourceTable
     end
 
     def sort
+      # Deliberately `columns` (visible), not `pickable` (all offerable): a
+      # sortable-but-hidden column stays unsortable via URL, so a bookmarked
+      # `?sort=` link degrades to the default order once that column is
+      # hidden, rather than ordering by a column the user cannot see.
       @sort ||= Sort.from_params(@params, columns)
     end
 
