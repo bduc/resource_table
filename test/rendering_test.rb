@@ -29,14 +29,15 @@ class RenderingTest < ActionView::TestCase
     end
   end
 
-  def render_table(params: {}, layout: nil, actions: nil, blocks: {})
+  def render_table(params: {}, layout: nil, actions: nil, blocks: {}, sort_path: nil)
     table = ResourceTable::Table.new(resource_class: resource, layout: layout, params: params)
     render partial: "resource_table/daisyui/table/table", locals: {
       table: table,
       collection: [ Book.new(title: "Dune", pages: 412, synopsis: "Sand.") ],
       presenter: ResourceTable::Presenter.new(view_context: view, blocks: blocks),
       actions: actions,
-      key: "BookResource/index"
+      key: "BookResource/index",
+      sort_path: sort_path
     }
   end
 
@@ -152,6 +153,52 @@ class RenderingTest < ActionView::TestCase
     assert_includes href, "status=active"
     assert_includes href, "page=1"
     refute_includes href, "page=4"
+  end
+
+  # --- sort_path: ----------------------------------------------------------
+  #
+  # Without it, the sort link is built from
+  # url_for(request.query_parameters.merge(...)) — no :controller/:action in
+  # that hash, so url_for recalls both from the current request. That
+  # resolves ambiguously whenever more than one route maps to the same
+  # controller action (mira's root "members#index" declared ahead of
+  # resources :members made sort links flip between "/" and "/leden"), and
+  # resolves to the *wrong* action's route entirely when the table is
+  # re-rendered inside a turbo_stream written by some other action (a
+  # board-membership delete produced a 404 sort link). sort_path sidesteps
+  # route resolution: the caller names the path outright.
+
+  test "sort_path: is used as the base for the sort link when given" do
+    render_table(params: { "sort" => "title", "dir" => "asc" }, sort_path: "/custom-books")
+    href = css_select("thead th[data-column='title'] a").first["href"]
+
+    assert_match %r{\A/custom-books\?}, href
+    assert_includes href, "sort=title"
+    assert_includes href, "dir=desc"
+  end
+
+  test "sort_path: still preserves every other filter and resets the page to 1" do
+    request.query_string = "q=jansen&status=active&page=4"
+
+    render_table(params: { "sort" => "title", "dir" => "asc" }, sort_path: "/custom-books")
+    href = css_select("thead th[data-column='title'] a").first["href"]
+
+    assert_match %r{\A/custom-books\?}, href
+    assert_includes href, "q=jansen"
+    assert_includes href, "status=active"
+    assert_includes href, "page=1"
+    refute_includes href, "page=4"
+  end
+
+  test "omitting sort_path: preserves today's url_for-based behaviour exactly" do
+    render_table(params: { "sort" => "title", "dir" => "asc" })
+    without_option = css_select("thead th[data-column='title'] a").first["href"]
+
+    render_table(params: { "sort" => "title", "dir" => "asc" }, sort_path: nil)
+    explicit_nil = css_select("thead th[data-column='title'] a").first["href"]
+
+    assert_equal without_option, explicit_nil
+    assert_match %r{\A/books\b}, without_option
   end
 
   test "cells render through the presenter" do

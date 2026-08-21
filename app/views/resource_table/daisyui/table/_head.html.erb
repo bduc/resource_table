@@ -1,4 +1,4 @@
-<%# Locals: table, actions %>
+<%# Locals: table, actions, sort_path (optional) %>
 <thead>
   <tr data-table-layout-target="headerRow">
     <% table.columns.each do |column| %>
@@ -9,8 +9,17 @@
         <span class="th-grip" data-table-layout-target="handle"
               title="<%= t("resource_table.reorder", default: "Sleep om te herschikken") %>">⠿</span>
         <% if column.sortable? %>
-          <%= link_to url_for(request.query_parameters.merge(
-                        sort: column.name, dir: table.sort.next_direction_for(column), page: 1)),
+          <%
+            sort_query = request.query_parameters.merge(
+              sort: column.name, dir: table.sort.next_direction_for(column), page: 1
+            )
+            # local_assigns[:sort_path], not the bare local: this partial may
+            # be rendered without a sort_path local at all (every caller
+            # before this option existed, and every test that renders it
+            # directly), and a bare reference to an undeclared local raises.
+            sort_href = local_assigns[:sort_path] ? "#{local_assigns[:sort_path]}?#{sort_query.to_query}" : url_for(sort_query)
+          %>
+          <%= link_to sort_href,
                       class: "th-sort #{'sort-active' if table.sort.direction_for(column)}" do %>
             <%= column.label %>
             <% if (dir = table.sort.direction_for(column)) %>

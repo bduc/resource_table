@@ -1,14 +1,17 @@
 <%#
-  Locals: table, collection, presenter, actions, key
+  Locals: table, collection, presenter, actions, key, sort_path (optional)
 
   The markup below is a contract with table_layout_controller.js — see §5 of
   docs/superpowers/specs/2026-08-21-resource-table-design.md. In particular the
   <colgroup> mirrors the header row 1:1 (spacer and actions included), because
   the controller maps a column to its <col> by index into the full header row.
 
-  No sort_url local: url_for(request.query_parameters.merge(...)) in _head
-  already produces the right target and preserves every filter param, so
-  there is nothing for a caller to pass here.
+  sort_path is optional and simply threaded through to _head.html.erb: when
+  omitted, _head falls back to url_for(request.query_parameters.merge(...)),
+  which already produces the right target and preserves every filter param
+  for the common case (an index page with one route to its own controller
+  action). See resource_table_for's own comment on sort_path for when that
+  fallback is wrong.
 %>
 <div class="overflow-x-auto resource-table-scroll"
      data-controller="table-layout"
@@ -31,7 +34,7 @@
       <% if actions %><col class="col-row-actions"><% end %>
     </colgroup>
 
-    <%= render "resource_table/daisyui/table/head", table: table, actions: actions %>
+    <%= render "resource_table/daisyui/table/head", table: table, actions: actions, sort_path: local_assigns[:sort_path] %>
 
     <tbody>
       <% collection.each do |record| %>

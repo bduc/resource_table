@@ -211,4 +211,24 @@ class TableHelperTest < ActionView::TestCase
     href = css_select("thead th[data-column='title'] a").first["href"]
     assert_includes href, "dir=desc"
   end
+
+  # --- sort_path: ----------------------------------------------------------
+
+  test "sort_path: reaches the sort link" do
+    controller.params = ActionController::Parameters.new(sort: "title", dir: "asc")
+
+    resource_table_for(books, resource: BookResource, sort_path: "/custom-books")
+
+    href = css_select("thead th[data-column='title'] a").first["href"]
+    assert_match %r{\A/custom-books\?}, href
+  end
+
+  test "omitting sort_path: falls back to url_for, unchanged" do
+    controller.params = ActionController::Parameters.new(sort: "title", dir: "asc")
+
+    resource_table_for(books, resource: BookResource)
+
+    href = css_select("thead th[data-column='title'] a").first["href"]
+    assert_match %r{\A/books\b}, href
+  end
 end
