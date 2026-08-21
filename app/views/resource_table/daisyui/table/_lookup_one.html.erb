@@ -6,10 +6,17 @@
   renderers already share the same label logic without this engine depending
   on resource_form.
 %>
-<td data-column="<%= column.name %>">
+<td data-column="<%= column.name %>"
+    class="<%= "text-right" if column.align == :right %><%= " text-center" if column.align == :center %>">
   <% associated = ResourceCore::Value.raw(record, column.name) %>
-  <% if associated %>
-    <%= link_to ResourceCore.lookup_label(associated), url_for(associated), class: "link link-hover" %>
+  <% if presenter.overridden?(column) %>
+    <%= presenter.cell(column, record) %>
+  <% elsif associated %>
+    <% if (url = presenter.record_url(associated)) %>
+      <%= link_to ResourceCore.lookup_label(associated), url, class: "link link-hover" %>
+    <% else %>
+      <%= ResourceCore.lookup_label(associated) %>
+    <% end %>
   <% else %>
     <%= presenter.cell(column, record) %>
   <% end %>

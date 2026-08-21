@@ -1,6 +1,8 @@
 <%# Locals: column, record, presenter %>
-<td data-column="<%= column.name %>" class="text-center">
-  <% if ResourceCore::Value.raw(record, column.name) %>
+<td data-column="<%= column.name %>" class="<%= column.align == :right ? "text-right" : "text-center" %>">
+  <% if presenter.overridden?(column) %>
+    <%= presenter.cell(column, record) %>
+  <% elsif ResourceCore::Value.raw(record, column.name) %>
     <span aria-label="<%= t("resource_table.yes", default: "ja") %>">✓</span>
   <% else %>
     <span class="text-base-content/30" aria-label="<%= t("resource_table.no", default: "nee") %>">–</span>

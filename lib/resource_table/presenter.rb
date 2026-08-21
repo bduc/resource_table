@@ -38,6 +38,30 @@ module ResourceTable
       ResourceCore::Value.display(record, column.name, column.value_spec)
     end
 
+    # Whether a call-site block or a cell_<name> method overrides this column.
+    # A specialised cell partial (boolean, lookup_one) renders its own markup only
+    # when nothing overrides it — otherwise the override wins, as it does for the
+    # generic cell.
+    def overridden?(column)
+      @blocks.key?(column.name) || self.class.method_defined?(:"cell_#{column.name}")
+    end
+
+    # The URL for a record's own show page, or nil if none can be generated —
+    # a model with no route (lookup_one's associated record) or none mounted
+    # for this record's controller/action (link: :self). Both the lookup_one
+    # and the generic cell partial fall back to plain text rather than
+    # letting url_for raise and take down the whole page over one cell.
+    #
+    # Rescued narrowly: ActionController::UrlGenerationError is Rails saying
+    # no route matches, NoMethodError is a *_path/*_url helper that was never
+    # defined for this model. Anything else is a genuine bug and should still
+    # raise.
+    def record_url(record)
+      @view_context.url_for(record)
+    rescue ActionController::UrlGenerationError, NoMethodError
+      nil
+    end
+
     private
 
     def method_missing(name, *args, &block)

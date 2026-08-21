@@ -100,4 +100,42 @@ class PresenterTest < ActiveSupport::TestCase
 
     assert_equal [ :title ], builder.cell_blocks.keys
   end
+
+  test "overridden? is true when a call-site block exists for the column" do
+    presenter = ResourceTable::Presenter.new(
+      view_context: FakeView.new,
+      blocks: { title: ->(b) { b.title } }
+    )
+
+    assert presenter.overridden?(column(:title))
+  end
+
+  test "overridden? is true when a cell_<name> method exists" do
+    presenter = BookPresenter.new(view_context: FakeView.new)
+
+    assert presenter.overridden?(column(:title))
+  end
+
+  test "overridden? is false when neither a block nor a cell_<name> method exists" do
+    presenter = ResourceTable::Presenter.new(view_context: FakeView.new)
+
+    refute presenter.overridden?(column(:pages))
+  end
+
+  test "overridden? uses method_defined?, not respond_to?, for the same reason cell does" do
+    # A view helper named cell_<column> must not be mistaken for an override —
+    # the presenter delegates missing methods to the view, so respond_to?
+    # would consult it too.
+    view = FakeView.new
+    def view.cell_pages(_record) = "from the view, wrongly"
+    presenter = ResourceTable::Presenter.new(view_context: view)
+
+    refute presenter.overridden?(column(:pages))
+  end
+
+  test "record_url returns nil, not raise, when the view context has no url_for" do
+    presenter = ResourceTable::Presenter.new(view_context: FakeView.new)
+
+    assert_nil presenter.record_url(book)
+  end
 end
