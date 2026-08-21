@@ -10,9 +10,19 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_08_20_000001) do
+ActiveRecord::Schema[8.1].define(version: 2026_08_21_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "author_settings", force: :cascade do |t|
+    t.bigint "author_id", null: false
+    t.datetime "created_at", null: false
+    t.string "key", null: false
+    t.datetime "updated_at", null: false
+    t.jsonb "value", default: {}, null: false
+    t.index ["author_id", "key"], name: "index_author_settings_on_author_id_and_key", unique: true
+    t.index ["author_id"], name: "index_author_settings_on_author_id"
+  end
 
   create_table "authors", force: :cascade do |t|
     t.boolean "active", default: true, null: false
@@ -20,6 +30,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_000001) do
     t.date "born_on"
     t.datetime "created_at", null: false
     t.string "name", null: false
+    t.jsonb "table_layouts", default: {}, null: false
     t.datetime "updated_at", null: false
   end
 
@@ -56,6 +67,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_08_20_000001) do
     t.index ["book_id"], name: "index_reviews_on_book_id"
   end
 
+  add_foreign_key "author_settings", "authors"
   add_foreign_key "books", "authors"
   add_foreign_key "books", "publishers"
   add_foreign_key "reviews", "books"
