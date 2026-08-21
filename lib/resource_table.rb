@@ -34,7 +34,8 @@ module ResourceTable
 
       klass = resource_name.safe_constantize
       return false if klass.nil? || !klass.is_a?(Class)
-      klass <= ResourceCore::BaseResource || false
+      # Module#<= yields nil for an unrelated class; coerce so the predicate always answers a boolean.
+      (klass <= ResourceCore::BaseResource) || false
     end
   end
 end

@@ -30,78 +30,65 @@ class LayoutKeyTest < ActiveSupport::TestCase
 
   # Tests for layout_key_valid? — rejection cases
 
-  test "layout_key_valid? rejects nil" do
-    assert_equal false, ResourceTable.layout_key_valid?(nil)
-  end
-
-  test "layout_key_valid? rejects non-string symbol" do
-    assert_equal false, ResourceTable.layout_key_valid?(:symbol)
-  end
-
-  test "layout_key_valid? rejects non-string hash" do
-    assert_equal false, ResourceTable.layout_key_valid?({})
-  end
-
-  test "layout_key_valid? rejects non-string integer" do
-    assert_equal false, ResourceTable.layout_key_valid?(42)
-  end
-
-  test "layout_key_valid? rejects non-string array" do
-    assert_equal false, ResourceTable.layout_key_valid?([])
+  test "layout_key_valid? rejects non-string types" do
+    [ nil, :symbol, {}, 42, [] ].each do |invalid_input|
+      refute ResourceTable.layout_key_valid?(invalid_input),
+             "Should reject #{invalid_input.inspect} (#{invalid_input.class})"
+    end
   end
 
   test "layout_key_valid? rejects key with no slash separator" do
-    assert_equal false, ResourceTable.layout_key_valid?("BookResourceindex")
+    refute ResourceTable.layout_key_valid?("BookResourceindex")
   end
 
   test "layout_key_valid? rejects double slash" do
-    assert_equal false, ResourceTable.layout_key_valid?("//")
+    refute ResourceTable.layout_key_valid?("//")
   end
 
   test "layout_key_valid? rejects extra path segments" do
-    assert_equal false, ResourceTable.layout_key_valid?("BookResource/index/extra")
+    refute ResourceTable.layout_key_valid?("BookResource/index/extra")
   end
 
   test "layout_key_valid? rejects different view segment" do
-    assert_equal false, ResourceTable.layout_key_valid?("BookResource/show")
+    refute ResourceTable.layout_key_valid?("BookResource/show")
   end
 
   test "layout_key_valid? rejects empty view segment" do
-    assert_equal false, ResourceTable.layout_key_valid?("BookResource/")
+    refute ResourceTable.layout_key_valid?("BookResource/")
   end
 
   test "layout_key_valid? rejects path traversal in view segment" do
-    assert_equal false, ResourceTable.layout_key_valid?("BookResource/../../etc")
+    refute ResourceTable.layout_key_valid?("BookResource/../../etc")
   end
 
   test "layout_key_valid? rejects name without resource suffix" do
-    assert_equal false, ResourceTable.layout_key_valid?("Book/index")
+    refute ResourceTable.layout_key_valid?("Book/index")
   end
 
   test "layout_key_valid? rejects namespaced constant" do
-    assert_equal false, ResourceTable.layout_key_valid?("Admin::BookResource/index")
+    refute ResourceTable.layout_key_valid?("Admin::BookResource/index")
   end
 
   test "layout_key_valid? rejects invalid character in resource name" do
-    assert_equal false, ResourceTable.layout_key_valid?("Book-Resource/index")
+    refute ResourceTable.layout_key_valid?("Book-Resource/index")
   end
 
   test "layout_key_valid? rejects constant name starting with lowercase" do
-    assert_equal false, ResourceTable.layout_key_valid?("bookResource/index")
+    refute ResourceTable.layout_key_valid?("bookResource/index")
   end
 
   test "layout_key_valid? rejects name that matches pattern but resolves to no constant" do
-    assert_equal false, ResourceTable.layout_key_valid?("NoSuchResource/index")
+    refute ResourceTable.layout_key_valid?("NoSuchResource/index")
   end
 
   test "layout_key_valid? rejects real class that is not a resource" do
-    assert_equal false, ResourceTable.layout_key_valid?("ImposterResource/index")
+    refute ResourceTable.layout_key_valid?("ImposterResource/index")
   end
 
   # Tests for layout_key_valid? — acceptance cases
 
   test "layout_key_valid? accepts a real resource class" do
-    assert_equal true, ResourceTable.layout_key_valid?("BookResource/index")
+    assert ResourceTable.layout_key_valid?("BookResource/index")
   end
 
   # Tests for layout_key method
