@@ -4,7 +4,7 @@ import { sendLayout } from "./layout_command.js"
 
 // Drag gestures for the collection table: column resize and header reorder.
 // Owns no persisted layout state and builds no display HTML — transient drag state only.
-// Every gesture commits via the stateful-component command pipeline, and the server re-renders the table.
+// Every gesture commits via a plain fetch PATCH; nothing re-renders. Only the picker reloads the page.
 export default class extends Controller {
     static targets = ["resizer", "headerRow"]
     static values  = { url: String, key: String }
@@ -50,9 +50,9 @@ export default class extends Controller {
 
     // Size each un-declared, non-flex column (server-flagged data-autosize) to its
     // content on first render — measure with fitWidth (header + visible cells,
-    // clamped 40–800), set its <col> width, and persist so it stays put across
-    // re-renders. Once persisted the server stops flagging it
-    // (TableComponent#autosize?), so this runs exactly once per fresh table.
+    // clamped 40–800), set its <col> width, and persist. Once persisted,
+    // Table#build (`autosize: !flex && width.nil?`) stops flagging it on the next
+    // full page load, not via an automatic re-render — so this runs once per table.
     autosizeColumns() {
         const autoThs = Array.from(this.headerRowTarget.querySelectorAll("th[data-autosize]"));
         if (!autoThs.length) return;
@@ -78,7 +78,7 @@ export default class extends Controller {
     // unsized absorber). Purely visual — the width is NOT persisted, so a later
     // re-render recomputes the fill for the current viewport; only an explicit drag
     // persists (see onResizeUp) and then the server renders it fixed
-    // (TableComponent#flex_column returns nil once it has a persisted width).
+    // (Table#build's `flex` no longer holds once the column has a persisted width).
     // Synchronous: initColumnLayout only calls this once the table has a real width.
     solidifyFlexColumn() {
         // [data-column] distinguishes the real flex column from the spacer th
@@ -235,8 +235,8 @@ export default class extends Controller {
 
         // Persist EVERY column's current width, not just the dragged one. All
         // columns are pinned to px during the drag; persisting them all means
-        // the server re-render reproduces the exact drag-end layout instead of
-        // letting the un-persisted columns revert to ratio widths and re-settle.
+        // the next full navigation reproduces the exact drag-end layout instead
+        // of letting the un-persisted columns revert to ratio widths and re-settle.
         const widths = {};
         Array.from(this.headerRowTarget.children).forEach((th) => {
             const name = th.dataset.column;

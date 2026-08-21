@@ -55,8 +55,14 @@ module ResourceTable
 
     def build(name, spec)
       index = spec[:index].is_a?(Hash) ? spec[:index] : {}
-      flex  = index[:flex] == true
       width = widths[name] || index[:width]
+      # A persisted width means the user has explicitly sized this column, so it
+      # stops being the slack absorber and the trailing spacer takes over — the
+      # behaviour solidifyFlexColumn's comment describes and mep's
+      # TableComponent#flex_column implemented by returning nil in this case. A
+      # *declared* width alongside `flex: true` is left alone: that combination
+      # is a developer error worth surfacing, not one to silently resolve.
+      flex = index[:flex] == true && widths[name].nil?
 
       Column.new(
         name: name,

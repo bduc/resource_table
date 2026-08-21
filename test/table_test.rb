@@ -121,6 +121,25 @@ class TableTest < ActiveSupport::TestCase
     refute table.columns.first.autosize?
   end
 
+  test "a persisted width revokes flex, and the width is applied" do
+    klass = resource { field :synopsis, index: { flex: true } }
+    layout = { "widths" => { "synopsis" => 250 } }
+    table = ResourceTable::Table.new(resource_class: klass, layout: layout)
+    column = table.columns.first
+
+    refute column.flex?
+    assert_equal 250, column.width
+  end
+
+  test "flex with no persisted width is still flex, with no width" do
+    klass = resource { field :synopsis, index: { flex: true } }
+    table = ResourceTable::Table.new(resource_class: klass)
+    column = table.columns.first
+
+    assert column.flex?
+    assert_nil column.width
+  end
+
   test "a label comes from index:, then the field label, then the model" do
     klass = Class.new(ResourceCore::BaseResource) do
       def self.name = "BookResource"
