@@ -11,14 +11,10 @@ module ResourceTable
     # Method sent to the view to find the layout's owner.
     attr_accessor :owner_method
 
-    # Theme name; partials resolve under resource_table/<theme>/table/.
-    attr_accessor :theme
-
     def initialize
       @layout_store = nil
       @layout_url   = "/table-layout"
       @owner_method = :current_user
-      @theme        = :daisyui
     end
   end
 end

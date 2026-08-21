@@ -35,3 +35,29 @@ jobs:
         working-directory: resource_table
       - run: bundle exec rake test
         working-directory: resource_table
+
+  javascript:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - run: node --test test/javascript/*.test.js
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: resource_table
+      - uses: actions/checkout@v4
+        with:
+          repository: bduc/resource_core
+          path: resource_core
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          working-directory: resource_table
+      - run: bin/rubocop -f github
+        working-directory: resource_table

@@ -13,6 +13,7 @@ Given a resource:
 class BookResource < ApplicationResource
   field :title,  index: { sortable: true, width: 320, label: "Title" }
   field :author, index: { sortable: "authors.name", label: "Author" }
+  field :price,  index: { label: "Price" }
   field :isbn,   index: { default: false }     # pickable, hidden by default
   field :notes,  index: false                  # never a column at all
 end
@@ -27,6 +28,11 @@ a view renders:
 <% end %>
 ```
 
+`t.cell(:price)` only fires for a column the resource actually declares —
+`price` has to appear in `BookResource` above (it does, as an `index:`
+column) or the block never runs; see "Presenter and block resolution order"
+below for the full lookup order a cell goes through.
+
 and gets a table with a drag handle per header, a drag handle on each column's
 right edge to resize it, a "columns" picker for anything declared `index:`,
 and — if the resource declares one — sortable headers. Every gesture PATCHes
@@ -35,24 +41,61 @@ a layout endpoint the host provides; nothing here re-renders the page.
 ## The `index:` namespace
 
 A field reaches the table only through its `index:` option, and that option
-has three states:
+has three states. The semantics are opt-**out**, not opt-in: `Table#specs`
+rejects only fields where `spec[:index] == false`, so a field with no
+`index:` at all is a **visible default column**, exactly like one with a
+declared `index: { ... }`.
 
-- **Absent, or `index: false`** — the field is not a column at all. It never
-  reaches the picker and can never be resurrected by a stored layout (a
-  stale `visible` array naming it is silently filtered against the
-  resource's current declared fields on every read).
-- **`index: { ... }`** (a Hash, however sparse) — the field is a column,
-  offered in the picker, **and** part of the coded default column set: the
-  columns a first-time visitor sees before ever touching the layout.
+- **`index: { ... }`** (a Hash, however sparse), **or no `index:` at all** —
+  the field is a column, offered in the picker, **and** part of the coded
+  default column set: the columns a first-time visitor sees before ever
+  touching the layout.
 - **`index: { default: false, ... }`** — the field is a column and is
   offered in the picker, but is **not** part of the default set. It only
   ever appears once a user's stored layout names it (by picking it, or by a
   layout written some other way).
+- **`index: false`** — the field is not a column at all. It never reaches
+  the picker and can never be resurrected by a stored layout (a stale
+  `visible` array naming it is silently filtered against the resource's
+  current declared fields on every read).
+
+A third conversion trusting the opposite reading — that leaving `index:` off
+means "not a column" — ships a table exposing every model attribute by
+default. If a field genuinely has no business in a table, say so explicitly
+with `index: false`.
 
 Declaration order is column order for both the default set and the picker —
 `field`'s delete-then-reinsert semantics mean a later `field :x, index: {...}`
 call both applies the option and moves `:x` to that position, without
 disturbing whatever `as:`/`class_name:`/etc. an earlier call set.
+
+### The rest of the `index:` options
+
+Beyond `sortable:` and `default:` (both covered on their own above), six more
+keys are registered (`ResourceCore.register_namespace :index, %i[sortable
+width align link label format default flex]`) and read by `Column`:
+
+- **`width:`** — the column's pixel width on first render. Only a starting
+  point: a user's drag-resize persists to the stored layout and wins over
+  this from then on (`Table#build`: `widths[name] || index[:width]`).
+- **`align:`** — `:right` or `:center` right/center-aligns the header and
+  cell text (e.g. a numeric `id` column); anything else (including absent)
+  left-aligns.
+- **`link:`** — `:self` makes the generic cell partial link its text to the
+  record's own show page (`Presenter#record_url`), falling back to plain
+  text if no route resolves for that model/action.
+- **`label:`** — the header text. Falls back to `index[:label]`, then
+  `spec[:label]`, then the model's `human_attribute_name`, then a humanized
+  field name — in that order (`Column#label`).
+- **`format:`** — handed to `ResourceCore::Value.display` for the generic
+  cell, winning over whatever format the field's own (non-`index`) spec set.
+- **`flex:`** — the one slack absorber among the visible columns: it grows
+  to fill leftover width rather than autosizing to its content. A
+  **persisted** width (one a user has actually dragged) revokes it —
+  `Table#build`'s `flex = index[:flex] == true && widths[name].nil?` — but a
+  merely *declared* `width:` does not, so declaring `width:` and `flex: true`
+  on the same field leaves both true at once. That combination is a
+  developer error the engine does not resolve for you; pick one.
 
 ## `sortable:` — `true`, or a string, and why
 
@@ -287,16 +330,19 @@ lets write to them. A host wires exactly four things:
 - **`config.owner_method`** — sent to the view to find the layout's owner
   (`current_user` by default; anything the host's session exposes works).
 - **A controller action behind that URL, in the host, that validates the
-  key before touching the store.** `ResourceTable.layout_key_valid?(key)`
-  answers whether a key names a real `ResourceCore::BaseResource` subclass
-  in `<ResourceName>/index` shape — call it *before* `constantize`-ing
-  anything the request sent, and reject the resource if it declares no
-  fields (a resource with no model behind it, or a base class with nothing
-  declared, still passes the shape check and would otherwise let a request
-  write a row that stores nothing useful). The host also decides what
-  `visible`/`widths` values are acceptable to persist (which field names are
-  known, what a width may range over) — the engine does not sanitise
-  payload contents for you, only the key.
+  key before touching the store.** `ResourceTable.layout_resource_class(key)`
+  is the single place a key string resolves to a constant — it returns the
+  `ResourceCore::BaseResource` subclass named by a `<ResourceName>/index`
+  shaped key, or `nil` for anything else — so call it in place of a second,
+  unguarded `constantize` and treat a `nil` result as invalid. (`layout_key_
+  valid?(key)` still exists as a plain yes/no wrapper around the same
+  resolution, for callers that only need the boolean.) Reject the resource
+  if it declares no fields (a resource with no model behind it, or a base
+  class with nothing declared, still passes the shape check and would
+  otherwise let a request write a row that stores nothing useful). The host
+  also decides what `visible`/`widths` values are acceptable to persist
+  (which field names are known, what a width may range over) — the engine
+  does not sanitise payload contents for you, only the key.
 
 ## `sort_path:`
 
