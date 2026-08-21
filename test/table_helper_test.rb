@@ -60,7 +60,7 @@ class TableHelperTest < ActionView::TestCase
     request.path_parameters = { controller: "books", action: "index" }
   end
 
-  teardown { ResourceTable.configure { |c| c.layout_store = nil } }
+  teardown { ResourceTable.configure { |c| c.layout_store = nil; c.owner_method = :current_user } }
 
   def current_author = @author
 

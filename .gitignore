@@ -7,3 +7,10 @@ test/dummy/log
 test/dummy/tmp
 test/dummy/storage
 .idea/
+
+# pnpm auto-installs peerDependencies (autoInstallPeers) the moment
+# `pnpm test:js` runs, even though this engine ships none of its own — the
+# host app supplies @hotwired/stimulus and sortablejs. Neither belongs in
+# version control here.
+node_modules/
+pnpm-lock.yaml

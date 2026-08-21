@@ -1,0 +1,12 @@
+{
+  "name": "resource_table",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:js": "node --test \"test/javascript/*.test.js\""
+  },
+  "peerDependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "sortablejs": "^1.15.6"
+  }
+}
