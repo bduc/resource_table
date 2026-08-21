@@ -1,1 +1,10 @@
-<td></td>
+<%# Locals: column, record, presenter %>
+<td data-column="<%= column.name %>"
+    class="<%= "text-right" if column.align == :right %><%= " text-center" if column.align == :center %>">
+  <% content = presenter.cell(column, record) %>
+  <% if column.link == :self && content.present? %>
+    <%= link_to content, url_for(record), class: "link link-hover" %>
+  <% else %>
+    <%= content %>
+  <% end %>
+</td>

@@ -1,0 +1,45 @@
+<%#
+  Locals: table, collection, presenter, actions, key
+
+  The markup below is a contract with table_layout_controller.js — see §5 of
+  docs/superpowers/specs/2026-08-21-resource-table-design.md. In particular the
+  <colgroup> mirrors the header row 1:1 (spacer and actions included), because
+  the controller maps a column to its <col> by index into the full header row.
+
+  No sort_url local: url_for(request.query_parameters.merge(...)) in _head
+  already produces the right target and preserves every filter param, so
+  there is nothing for a caller to pass here.
+%>
+<div class="overflow-x-auto resource-table-scroll"
+     data-controller="table-layout"
+     data-table-layout-url-value="<%= ResourceTable.config.layout_url %>"
+     data-table-layout-key-value="<%= key %>">
+  <table class="table table-zebra table-sm resource-table">
+    <colgroup>
+      <% table.columns.each do |column| %>
+        <%#
+          A space before tag.attributes is load-bearing: TagBuilder#attributes
+          strips its own output, so with no space "col" and "style=" glue into
+          one malformed tag name ("colstyle") whenever a column has a width —
+          a col that is invisible to `colgroup col`, not merely unstyled.
+        %>
+        <col <%= tag.attributes(style: column.width ? "width: #{column.width}px" : nil) %>>
+      <% end %>
+      <%# Zero-width while a flex data column is filling; solidifyFlexColumn
+          releases it once that column has been frozen to a fixed width. %>
+      <col class="col-flex-spacer" <%= tag.attributes(style: table.columns.any?(&:flex?) ? "width:0" : nil) %>>
+      <% if actions %><col class="col-row-actions"><% end %>
+    </colgroup>
+
+    <%= render "resource_table/daisyui/table/head", table: table, actions: actions %>
+
+    <tbody>
+      <% collection.each do |record| %>
+        <%= render "resource_table/daisyui/table/row",
+                   table: table, record: record, presenter: presenter, actions: actions %>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<%= render "resource_table/daisyui/table/picker", table: table, key: key %>

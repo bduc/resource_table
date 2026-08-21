@@ -1,0 +1,38 @@
+<%# Locals: table, actions %>
+<thead>
+  <tr data-table-layout-target="headerRow">
+    <% table.columns.each do |column| %>
+      <th data-column="<%= column.name %>"
+          <%= "data-flex".html_safe if column.flex? %>
+          <%= "data-autosize".html_safe if column.autosize? %>
+          <%= tag.attributes(style: column.width ? "width: #{column.width}px" : nil) %>>
+        <span class="th-grip" data-table-layout-target="handle"
+              title="<%= t("resource_table.reorder", default: "Sleep om te herschikken") %>">⠿</span>
+        <% if column.sortable? %>
+          <%= link_to url_for(request.query_parameters.merge(
+                        sort: column.name, dir: table.sort.next_direction_for(column), page: 1)),
+                      class: "th-sort #{'sort-active' if table.sort.direction_for(column)}" do %>
+            <%= column.label %>
+            <% if (dir = table.sort.direction_for(column)) %>
+              <span aria-hidden="true"><%= dir == "asc" ? "▲" : "▼" %></span>
+            <% end %>
+          <% end %>
+        <% else %>
+          <span class="th-label"><%= column.label %></span>
+        <% end %>
+        <span class="th-resizer" data-table-layout-target="resizer"
+              data-column="<%= column.name %>"></span>
+      </th>
+    <% end %>
+
+    <%# Always present: an unsized trailing column that soaks up the table's
+        leftover width, so every real column keeps a fixed, resizable width.
+        No data-column, so it is invisible to reorder and resize. %>
+    <th class="col-flex-spacer" data-flex aria-hidden="true"></th>
+
+    <%# Pinned actions column: no data-column, no grip, no resizer, no sort. %>
+    <% if actions %>
+      <th class="col-row-actions"><span class="sr-only"><%= t("resource_table.actions", default: "Acties") %></span></th>
+    <% end %>
+  </tr>
+</thead>

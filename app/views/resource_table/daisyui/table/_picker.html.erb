@@ -1,0 +1,24 @@
+<%# Locals: table, key
+    A change posts the same PATCH the drag gestures use. %>
+<div class="dropdown dropdown-end resource-table-picker"
+     data-controller="table-layout-picker"
+     data-table-layout-picker-url-value="<%= ResourceTable.config.layout_url %>"
+     data-table-layout-picker-key-value="<%= key %>">
+  <div tabindex="0" role="button" class="btn btn-outline btn-sm btn-square"
+       title="<%= t("resource_table.columns", default: "Kolommen") %>"
+       aria-label="<%= t("resource_table.columns", default: "Kolommen") %>">☰</div>
+  <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-10 w-60 p-2 shadow max-h-[60vh] flex-nowrap overflow-y-auto">
+    <% visible = table.columns.map(&:name) %>
+    <% table.pickable.each do |column| %>
+      <li>
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm"
+                 value="<%= column.name %>"
+                 <%= "checked" if visible.include?(column.name) %>
+                 data-action="change->table-layout-picker#toggle">
+          <span class="label-text"><%= column.label %></span>
+        </label>
+      </li>
+    <% end %>
+  </ul>
+</div>

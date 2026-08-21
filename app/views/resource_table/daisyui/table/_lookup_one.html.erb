@@ -1,1 +1,16 @@
-<td></td>
+<%#
+  Locals: column, record, presenter
+
+  ResourceCore.lookup_label, not ResourceForm.lookup_label: the latter belongs
+  to the form engine and is a one-line delegation to the former, so both
+  renderers already share the same label logic without this engine depending
+  on resource_form.
+%>
+<td data-column="<%= column.name %>">
+  <% associated = ResourceCore::Value.raw(record, column.name) %>
+  <% if associated %>
+    <%= link_to ResourceCore.lookup_label(associated), url_for(associated), class: "link link-hover" %>
+  <% else %>
+    <%= presenter.cell(column, record) %>
+  <% end %>
+</td>

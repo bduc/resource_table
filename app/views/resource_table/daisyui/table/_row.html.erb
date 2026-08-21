@@ -1,0 +1,11 @@
+<%# Locals: table, record, presenter, actions %>
+<tr>
+  <% table.columns.each do |column| %>
+    <%= render "resource_table/daisyui/table/#{column.partial}",
+               column: column, record: record, presenter: presenter %>
+  <% end %>
+  <td class="col-flex-spacer"></td>
+  <% if actions %>
+    <td class="col-row-actions"><%= capture(record, &actions) %></td>
+  <% end %>
+</tr>
