@@ -131,7 +131,7 @@ class TableTest < ActiveSupport::TestCase
     by_name = table.columns.index_by(&:name)
 
     assert_equal "Titel", by_name[:title].label
-    assert_equal Book.human_attribute_name(:isbn), by_name[:isbn].label
+    assert_equal "ISBN number", by_name[:isbn].label
   end
 
   test "sortable: true sorts on the column's own name" do
