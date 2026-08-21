@@ -21,15 +21,23 @@ module ResourceTable
         return nil if record.nil?
 
         value = record.public_send(@value_column)
-        value.presence && stringify(value)
+        value.presence && Stores.normalize_layout(value)
       end
 
       def write(owner, key, layout)
         return nil if owner.nil?
 
+        normalized = Stores.normalize_layout(layout)
         record = scope(owner).find_or_initialize_by(@key_column => key.to_s)
-        record.public_send(:"#{@value_column}=", stringify(layout))
+        record.public_send(:"#{@value_column}=", normalized)
         record.save!
+        record.public_send(@value_column)
+      rescue ActiveRecord::RecordNotUnique
+        # Another connection created this (owner, key) between our find and our
+        # save — two tabs on the same table. The unique index did its job; take
+        # the row that won and update it.
+        record = scope(owner).find_by!(@key_column => key.to_s)
+        record.update!(@value_column => normalized)
         record.public_send(@value_column)
       end
 
@@ -37,12 +45,6 @@ module ResourceTable
 
       def scope(owner)
         @model.where(@owner_association => owner)
-      end
-
-      # jsonb hands back string keys, so a layout written with symbols must read
-      # back the same way whether or not it has been through the database yet.
-      def stringify(value)
-        value.to_h.deep_transform_keys(&:to_s)
       end
     end
   end

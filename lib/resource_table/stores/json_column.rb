@@ -13,13 +13,13 @@ module ResourceTable
         return nil if owner.nil?
 
         value = all(owner)[key.to_s]
-        value.presence && stringify(value)
+        value.presence && Stores.normalize_layout(value)
       end
 
       def write(owner, key, layout)
         return nil if owner.nil?
 
-        merged = all(owner).merge(key.to_s => stringify(layout))
+        merged = all(owner).merge(key.to_s => Stores.normalize_layout(layout))
         owner.update!(@column => merged)
         merged[key.to_s]
       end
@@ -28,10 +28,6 @@ module ResourceTable
 
       def all(owner)
         (owner.public_send(@column) || {}).to_h
-      end
-
-      def stringify(value)
-        value.to_h.deep_transform_keys(&:to_s)
       end
     end
   end
