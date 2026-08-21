@@ -17,6 +17,16 @@ export function layoutPayload(key, body) {
   return { key, [field]: body[field] }
 }
 
+// Whether a fetch Response represents an actual layout write. A layout PATCH
+// should never be redirected — if it is (e.g. mira's must_reset_password
+// gate sends a signed-in user to an HTML page instead of handling the PATCH),
+// fetch transparently follows the redirect and reports `ok: true` for the
+// *redirect target*, not for the write. Split out, like layoutPayload, so
+// node --test can exercise the decision without a fetch mock.
+export function layoutWriteSucceeded(response) {
+  return response.ok && !response.redirected
+}
+
 export async function sendLayout(url, key, body) {
   const payload = layoutPayload(key, body)
   if (!payload) return false
@@ -33,8 +43,9 @@ export async function sendLayout(url, key, body) {
       },
       body: JSON.stringify(payload)
     })
-    if (!response.ok) console.warn("table layout rejected", response.status)
-    return response.ok
+    const success = layoutWriteSucceeded(response)
+    if (!success) console.warn("table layout rejected", response.status)
+    return success
   } catch (error) {
     console.warn("table layout failed", error)
     return false
