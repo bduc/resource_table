@@ -31,7 +31,7 @@ module ResourceTable
       # (a board-membership delete once produced a 404 sort link). Passing an
       # explicit path sidesteps route resolution entirely.
       def resource_table_for(collection, resource: nil, presenter: nil, key: nil,
-                             layout: nil, view: :index, table: nil, sort_path: nil, **options, &block)
+                             layout: nil, table: nil, sort_path: nil, **options, &block)
         presenter_class = presenter || ResourceTable::Presenter
         resource_class  = resource || presenter_class.resource || table&.resource_class
 
@@ -41,7 +41,7 @@ module ResourceTable
                 "or a presenter: declaring one with `resource MyResource`"
         end
 
-        key ||= ResourceTable.layout_key(resource_class, view)
+        key ||= ResourceTable.layout_key(resource_class)
 
         table ||= begin
           layout = resource_table_layout(key) if layout.nil?

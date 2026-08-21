@@ -289,7 +289,7 @@ lets write to them. A host wires exactly four things:
 - **A controller action behind that URL, in the host, that validates the
   key before touching the store.** `ResourceTable.layout_key_valid?(key)`
   answers whether a key names a real `ResourceCore::BaseResource` subclass
-  in `<ResourceName>/<view>` shape — call it *before* `constantize`-ing
+  in `<ResourceName>/index` shape — call it *before* `constantize`-ing
   anything the request sent, and reject the resource if it declares no
   fields (a resource with no model behind it, or a base class with nothing
   declared, still passes the shape check and would otherwise let a request

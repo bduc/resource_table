@@ -76,10 +76,20 @@ module ResourceTable
       )
     end
 
+    # layout: is public, documented API (README: "table: lets a caller..." /
+    # resource_table_for's own layout: param), and a host is free to hand it
+    # ActionController::Parameters directly (e.g. Table.new(layout:
+    # params.slice(:visible, :widths))) — whose #to_h RAISES
+    # UnfilteredParameters unless the object has been permitted. Reach for
+    # #to_unsafe_h instead, same reasoning and same fix as Sort.normalize:
+    # nothing here is trusted either way, since `visible_names`/`widths`
+    # below only ever use this hash's values to look up columns the resource
+    # itself declared.
     def stringify(layout)
       return {} if layout.blank?
 
-      layout.to_h.transform_keys(&:to_s)
+      hash = layout.respond_to?(:to_unsafe_h) ? layout.to_unsafe_h : layout.to_h
+      hash.transform_keys(&:to_s)
     end
   end
 end

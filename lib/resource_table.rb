@@ -17,10 +17,13 @@ module ResourceTable
       config.layout_store
     end
 
-    # The layout key for a resource: resource plus view name, so one layout is
-    # shared by every page rendering the same table.
-    def layout_key(resource_class, view = :index)
-      "#{resource_class.name}/#{view}"
+    # The layout key for a resource: <ResourceName>/index. There is only one
+    # view worth keying on today — layout_resource_class below only ever
+    # accepts the literal "index" segment — so this takes no view argument.
+    # A real second view would mean widening that validator too, not just
+    # generating a different string here.
+    def layout_key(resource_class)
+      "#{resource_class.name}/index"
     end
 
     # The resource class named by a layout key, or nil if the key does not

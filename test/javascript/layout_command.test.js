@@ -1,6 +1,81 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { layoutPayload, layoutWriteSucceeded } from "../../app/javascript/resource_table/layout_command.js"
+import { layoutPayload, layoutWriteSucceeded, sendLayout } from "../../app/javascript/resource_table/layout_command.js"
+
+// sendLayout reads document.querySelector for the CSRF meta tag and calls
+// the global fetch — neither exists in plain node, so each test below stubs
+// both on globalThis and restores them in a finally, exactly as instructed:
+// a stub left behind would leak between tests and hide exactly the kind of
+// regression this file exists to catch (dropped CSRF header, wrong verb,
+// missing credentials — every one of those still leaves layoutWriteSucceeded
+// 8/8 green, which is why sendLayout itself needs direct coverage).
+function stubDocument(token = "the-csrf-token") {
+  const original = globalThis.document
+  globalThis.document = {
+    querySelector(selector) {
+      assert.equal(selector, "meta[name='csrf-token']")
+      return token === null ? null : { content: token }
+    }
+  }
+  return () => {
+    if (original === undefined) delete globalThis.document
+    else globalThis.document = original
+  }
+}
+
+function stubFetch(response) {
+  const original = globalThis.fetch
+  const calls = []
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options })
+    return response
+  }
+  return { calls, restore: () => { globalThis.fetch = original } }
+}
+
+test("sendLayout PATCHes the url with credentials, the CSRF header and the layoutPayload body", async () => {
+  const restoreDocument = stubDocument("the-csrf-token")
+  const { calls, restore: restoreFetch } = stubFetch({ ok: true, redirected: false })
+
+  try {
+    const body = { command: "set_column_widths", widths: { title: 180 } }
+    const succeeded = await sendLayout("/table_layouts", "BookResource/index", body)
+
+    assert.ok(succeeded)
+    assert.equal(calls.length, 1)
+    const { url, options } = calls[0]
+
+    assert.equal(url, "/table_layouts")
+    assert.equal(options.method, "PATCH")
+    assert.equal(options.credentials, "same-origin")
+    assert.equal(options.headers["X-CSRF-Token"], "the-csrf-token")
+    assert.deepEqual(
+      JSON.parse(options.body),
+      layoutPayload("BookResource/index", body)
+    )
+  } finally {
+    restoreFetch()
+    restoreDocument()
+  }
+})
+
+test("sendLayout treats a redirected response as a failure, per layoutWriteSucceeded", async () => {
+  const restoreDocument = stubDocument("the-csrf-token")
+  const { calls, restore: restoreFetch } = stubFetch({ ok: true, redirected: true })
+
+  try {
+    const succeeded = await sendLayout("/table_layouts", "BookResource/index", {
+      command: "set_column_layout",
+      visible: [ "title" ]
+    })
+
+    assert.equal(calls.length, 1, "sendLayout must still make the request")
+    assert.equal(succeeded, false)
+  } finally {
+    restoreFetch()
+    restoreDocument()
+  }
+})
 
 test("a width command carries the key and the widths", () => {
   assert.deepEqual(

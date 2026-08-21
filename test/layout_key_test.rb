@@ -21,11 +21,36 @@ class LayoutKeyTest < ActiveSupport::TestCase
       end
     end
     Object.const_set("ImposterResource", @imposter_class)
+
+    # Two constants that are genuinely resolvable AND genuinely
+    # ResourceCore::BaseResource subclasses, so the only thing standing
+    # between them and a valid key is the shape regex — not the ancestry
+    # check, and not safe_constantize finding nothing. Deleting the regex's
+    # match? line must turn the tests using these red; a class name that
+    # simply fails to constantize would pass regardless of the regex, which
+    # is exactly the false coverage this guards against.
+    @namespaced_class = Class.new(ResourceCore::BaseResource) do
+      def self.name
+        "Admin::BookResource"
+      end
+    end
+    admin_module = Module.new
+    Object.const_set("Admin", admin_module)
+    admin_module.const_set("BookResource", @namespaced_class)
+
+    @underscored_class = Class.new(ResourceCore::BaseResource) do
+      def self.name
+        "Book_Resource"
+      end
+    end
+    Object.const_set("Book_Resource", @underscored_class)
   end
 
   teardown do
     Object.send(:remove_const, "BookResource") if Object.const_defined?("BookResource")
     Object.send(:remove_const, "ImposterResource") if Object.const_defined?("ImposterResource")
+    Object.send(:remove_const, "Admin") if Object.const_defined?("Admin")
+    Object.send(:remove_const, "Book_Resource") if Object.const_defined?("Book_Resource")
   end
 
   # Tests for layout_key_valid? — rejection cases
@@ -65,12 +90,26 @@ class LayoutKeyTest < ActiveSupport::TestCase
     refute ResourceTable.layout_key_valid?("Book/index")
   end
 
-  test "layout_key_valid? rejects namespaced constant" do
+  # Admin::BookResource genuinely exists and genuinely inherits from
+  # BaseResource (see setup) — safe_constantize would resolve it and the
+  # ancestry check would pass, so only the regex's ban on "::" stops it.
+  # A string that merely fails to constantize (as most of the other
+  # rejection tests in this file do) cannot tell that apart from the regex
+  # actually doing its job.
+  test "layout_key_valid? rejects a namespaced constant that really does resolve" do
     refute ResourceTable.layout_key_valid?("Admin::BookResource/index")
   end
 
   test "layout_key_valid? rejects invalid character in resource name" do
     refute ResourceTable.layout_key_valid?("Book-Resource/index")
+  end
+
+  # Book_Resource genuinely exists and genuinely inherits from BaseResource
+  # (see setup) — Ruby constant names may contain underscores, so this is
+  # not a syntax error the way "Book-Resource" above is. Only the regex's
+  # [A-Za-z0-9]* character class (no underscore) stops it.
+  test "layout_key_valid? rejects an underscored constant that really does resolve" do
+    refute ResourceTable.layout_key_valid?("Book_Resource/index")
   end
 
   test "layout_key_valid? rejects constant name starting with lowercase" do
@@ -98,6 +137,17 @@ class LayoutKeyTest < ActiveSupport::TestCase
     assert_equal @resource_class, ResourceTable.layout_resource_class("BookResource/index")
   end
 
+  # Same reasoning as the layout_key_valid? tests above: both of these keys
+  # name real, resolvable ResourceCore::BaseResource subclasses (see setup),
+  # so only the regex stands between them and being returned.
+  test "layout_resource_class returns nil for a namespaced constant that really does resolve" do
+    assert_nil ResourceTable.layout_resource_class("Admin::BookResource/index")
+  end
+
+  test "layout_resource_class returns nil for an underscored constant that really does resolve" do
+    assert_nil ResourceTable.layout_resource_class("Book_Resource/index")
+  end
+
   test "layout_resource_class returns nil for each invalid key shape" do
     [
       nil,
@@ -114,6 +164,7 @@ class LayoutKeyTest < ActiveSupport::TestCase
       "Book/index",
       "Admin::BookResource/index",
       "Book-Resource/index",
+      "Book_Resource/index",
       "bookResource/index",
       "NoSuchResource/index",
       "ImposterResource/index"
@@ -124,20 +175,17 @@ class LayoutKeyTest < ActiveSupport::TestCase
   end
 
   # Tests for layout_key method
+  #
+  # layout_key takes no view argument: layout_resource_class only ever
+  # accepts the literal "index" segment (see the rejection tests above), so
+  # a `view:` that produced anything else could only ever build a key no
+  # request could resolve back to a class.
 
-  test "layout_key builds key from resource class and default view" do
+  test "layout_key builds <ResourceName>/index from the resource class" do
     assert_equal "BookResource/index", ResourceTable.layout_key(@resource_class)
   end
 
-  test "layout_key builds key from resource class and explicit view" do
-    assert_equal "BookResource/show", ResourceTable.layout_key(@resource_class, :show)
-  end
-
-  test "layout_key converts symbol view to string" do
-    assert_equal "BookResource/custom", ResourceTable.layout_key(@resource_class, :custom)
-  end
-
-  test "layout_key uses Resource class name" do
-    assert_equal "BookResource/index", ResourceTable.layout_key(@resource_class)
+  test "layout_key takes no second argument" do
+    assert_raises(ArgumentError) { ResourceTable.layout_key(@resource_class, :show) }
   end
 end

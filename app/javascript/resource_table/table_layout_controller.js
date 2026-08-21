@@ -4,7 +4,11 @@ import { sendLayout } from "./layout_command.js"
 
 // Drag gestures for the collection table: column resize and header reorder.
 // Owns no persisted layout state and builds no display HTML — transient drag state only.
-// Every gesture commits via a plain fetch PATCH; nothing re-renders. Only the picker reloads the page.
+// Every gesture commits via a plain fetch PATCH; nothing re-renders client-side. Resize only
+// changes widths, so the existing DOM stays correct. Reorder is different: SortableJS has
+// already moved the <th> before onEnd fires, but <colgroup> and every <tbody> cell have not
+// moved with it, so a successful reorder reloads the page — same as the picker — to get a
+// server render where body and colgroup agree with the new header order again.
 export default class extends Controller {
     static targets = ["resizer", "headerRow"]
     static values  = { url: String, key: String }
@@ -267,19 +271,31 @@ export default class extends Controller {
     }
 
     // ---- reorder ----
-    onReorder(event) {
+    // SortableJS has already physically moved the dragged <th> in the DOM by
+    // the time onEnd fires, but nothing else agrees with it yet: <colgroup>
+    // and every <tbody> cell are still in server order, and colFor (used by
+    // resize) indexes into this now-shuffled header. The picker's toggle()
+    // reloads for the same reason (a server re-render is what keeps body and
+    // colgroup in sync) — reorder must do the same rather than try to shuffle
+    // <td>s and <col>s client-side, which would be a second mechanism to keep
+    // in sync with the server instead of one.
+    async onReorder(event) {
         if (event && event.oldIndex === event.newIndex) return;
         const visible = Array.from(this.headerRowTarget.querySelectorAll("th[data-column]"))
             .map(th => th.dataset.column);
-        this.sendCommand({ command: "set_column_layout", visible });
+        if (await this.sendCommand({ command: "set_column_layout", visible })) {
+            window.location.reload();
+        }
     }
 
     // ---- shared command sender ----
     // urlValue/keyValue live on this.element (the scroll wrapper carrying
     // data-controller), never on a target. sendLayout (layout_command.js)
-    // builds the payload and PATCHes it; console.warn logs a rejection or
-    // failure since there is no this.log() here.
+    // builds the payload, PATCHes it and resolves to whether the write
+    // actually succeeded; console.warn logs a rejection or failure since
+    // there is no this.log() here. Returned (not fired-and-forgotten) so
+    // onReorder can reload only after a successful write.
     sendCommand(body) {
-        sendLayout(this.urlValue, this.keyValue, body)
+        return sendLayout(this.urlValue, this.keyValue, body)
     }
 }

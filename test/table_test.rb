@@ -58,6 +58,21 @@ class TableTest < ActiveSupport::TestCase
     assert_equal %i[isbn title], table.columns.map(&:name)
   end
 
+  # layout: is public API (README, resource_table_for's layout: param), and a
+  # host is free to hand it ActionController::Parameters straight from a
+  # request — whose #to_h raises UnfilteredParameters unless permitted.
+  # Sort.normalize already handles the identical situation for params:; this
+  # pins Table#stringify to the same behaviour.
+  test "an unpermitted ActionController::Parameters layout does not raise" do
+    klass = resource { field :title }
+    layout = ActionController::Parameters.new(visible: %w[title])
+    refute layout.permitted?
+
+    table = ResourceTable::Table.new(resource_class: klass, layout: layout)
+
+    assert_equal %i[title], table.columns.map(&:name)
+  end
+
   test "a stored layout naming a field that no longer exists drops it" do
     klass = resource { field :title }
     layout = { "visible" => %w[title removed_column] }
