@@ -29,7 +29,7 @@ module ResourceTable
 
     def sortable?
       value = index_spec[:sortable]
-      value == true || (value.is_a?(String) && value.present?)
+      value == true || ((value.is_a?(String) || value.is_a?(Symbol)) && value.present?)
     end
 
     # Always a declared value — never anything derived from a request param.

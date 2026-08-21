@@ -148,6 +148,13 @@ class TableTest < ActiveSupport::TestCase
     assert_equal "departments.name", column.sort_expression
   end
 
+  test "sortable: a symbol is the expression to order by" do
+    column = ResourceTable::Column.new(name: :department, spec: { index: { sortable: :department_name } })
+
+    assert column.sortable?
+    assert_equal "department_name", column.sort_expression
+  end
+
   test "a field with no sortable is not sortable" do
     refute ResourceTable::Column.new(name: :title, spec: {}).sortable?
     refute ResourceTable::Column.new(name: :title, spec: { index: { sortable: false } }).sortable?
