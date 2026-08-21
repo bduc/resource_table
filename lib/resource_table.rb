@@ -33,7 +33,8 @@ module ResourceTable
       return false unless resource_name&.match?(/\A[A-Z][A-Za-z0-9]*#{Regexp.escape(ResourceCore.config.resource_class_suffix)}\z/)
 
       klass = resource_name.safe_constantize
-      !klass.nil? && klass.is_a?(Class) && klass <= ResourceCore::BaseResource
+      return false if klass.nil? || !klass.is_a?(Class)
+      klass <= ResourceCore::BaseResource || false
     end
   end
 end
