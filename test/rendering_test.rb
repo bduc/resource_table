@@ -262,6 +262,58 @@ class RenderingTest < ActionView::TestCase
     assert css_select("input[type=checkbox][value='title']").first["checked"]
   end
 
+  # --- picker: --------------------------------------------------------------
+  #
+  # _table.html.erb used to render the picker unconditionally, immediately
+  # after the scroll wrapper — hardcoding its page position in the engine.
+  # picker: (threaded through from resource_table_for's own picker: option)
+  # lets a host render the table without it, and place
+  # resource_table_picker_for's markup wherever its own layout wants instead.
+
+  test "the picker renders inline when picker: is omitted" do
+    render_table
+
+    assert_equal 1, css_select(".resource-table-picker").size
+  end
+
+  test "picker: false suppresses the inline picker" do
+    table = ResourceTable::Table.new(resource_class: resource)
+    render partial: "resource_table/daisyui/table/table", locals: {
+      table: table,
+      collection: [ Book.new(title: "Dune", pages: 412, synopsis: "Sand.") ],
+      presenter: ResourceTable::Presenter.new(view_context: view),
+      actions: nil, key: "BookResource/index", sort_path: nil, picker: false
+    }
+
+    assert_equal 0, css_select(".resource-table-picker").size
+  end
+
+  # --- _picker.html.erb's class: ---------------------------------------------
+  #
+  # The wrapper's dropdown-end/dropdown-start alignment is placement-
+  # dependent: a right-aligned menu belongs to a trigger at a right edge (a
+  # card header), not one near the left edge (the old inline position). The
+  # engine cannot know which a host chose, so it takes class: rather than
+  # hardcoding either.
+
+  test "the picker wrapper defaults to dropdown-end" do
+    table = ResourceTable::Table.new(resource_class: resource)
+    render partial: "resource_table/daisyui/table/picker",
+           locals: { table: table, key: "BookResource/index" }
+
+    assert_includes css_select(".resource-table-picker").first["class"], "dropdown-end"
+  end
+
+  test "class: overrides the picker wrapper's default alignment" do
+    table = ResourceTable::Table.new(resource_class: resource)
+    render partial: "resource_table/daisyui/table/picker",
+           locals: { table: table, key: "BookResource/index", class: "dropdown-start" }
+
+    wrapper_class = css_select(".resource-table-picker").first["class"]
+    assert_includes wrapper_class, "dropdown-start"
+    refute_includes wrapper_class, "dropdown-end"
+  end
+
   test "an empty collection still renders the header" do
     table = ResourceTable::Table.new(resource_class: resource)
     render partial: "resource_table/daisyui/table/table", locals: {

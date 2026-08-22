@@ -1,6 +1,12 @@
-<%# Locals: table, key
-    A change posts the same PATCH the drag gestures use. %>
-<div class="dropdown resource-table-picker"
+<%# Locals: table, key, class (optional)
+    A change posts the same PATCH the drag gestures use.
+
+    class: is merged onto the wrapper's class list in place of the default,
+    and defaults to "dropdown-end" — see resource_table_picker_for's own
+    comment on why the right placement depends on where the host puts this
+    (a right-aligned menu belongs to a trigger at a right edge; it overflows
+    the viewport hung off a trigger anywhere else). %>
+<div class="dropdown resource-table-picker <%= local_assigns[:class] || "dropdown-end" %>"
      data-controller="table-layout-picker"
      data-table-layout-picker-url-value="<%= ResourceTable.config.layout_url %>"
      data-table-layout-picker-key-value="<%= key %>">

@@ -1,5 +1,6 @@
 <%#
-  Locals: table, collection, presenter, actions, key, sort_path (optional)
+  Locals: table, collection, presenter, actions, key, sort_path (optional),
+  picker (optional, defaults to true)
 
   The markup below is a contract with table_layout_controller.js — see §5 of
   docs/superpowers/specs/2026-08-21-resource-table-design.md. In particular the
@@ -12,6 +13,11 @@
   for the common case (an index page with one route to its own controller
   action). See resource_table_for's own comment on sort_path for when that
   fallback is wrong.
+
+  picker defaults to true (the historical placement: immediately below the
+  table). A host that wants the picker elsewhere (a card header, beside a
+  "+" button) passes picker: false to resource_table_for and renders
+  resource_table_picker_for separately, wherever its own layout wants it.
 %>
 <div class="overflow-x-auto resource-table-scroll"
      data-controller="table-layout"
@@ -45,4 +51,6 @@
   </table>
 </div>
 
-<%= render "resource_table/daisyui/table/picker", table: table, key: key %>
+<% if local_assigns.fetch(:picker, true) %>
+  <%= render "resource_table/daisyui/table/picker", table: table, key: key %>
+<% end %>

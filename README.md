@@ -34,9 +34,12 @@ column) or the block never runs; see "Presenter and block resolution order"
 below for the full lookup order a cell goes through.
 
 and gets a table with a drag handle per header, a drag handle on each column's
-right edge to resize it, a "columns" picker for anything declared `index:`,
-and — if the resource declares one — sortable headers. Every gesture PATCHes
-a layout endpoint the host provides; nothing here re-renders the page.
+right edge to resize it, a "columns" picker for anything declared `index:`
+(rendered immediately below the table by default — see `picker:` and
+`resource_table_picker_for` below for placing it elsewhere, e.g. a card
+header), and — if the resource declares one — sortable headers. Every
+gesture PATCHes a layout endpoint the host provides; nothing here re-renders
+the page.
 
 ## The `index:` namespace
 
@@ -366,6 +369,45 @@ Pass `sort_path:` explicitly whenever either applies:
 a controller that read `table.sort.order_clause` before querying), so the
 view does not construct a second `Table` from a second layout-store read for
 the same request.
+
+## `picker:` and `resource_table_picker_for`
+
+`resource_table_for` renders the "columns" picker immediately after the
+table by default (`picker: true`) — the historical placement, so no existing
+caller silently loses it. A bare ☰ button below the last row is easy to miss,
+though, so pass `picker: false` to render the table without it, and call
+`resource_table_picker_for` separately to place the picker wherever the
+host's layout actually wants it — typically a card header, beside a "+"
+button:
+
+```erb
+<div class="card-header flex justify-between items-center">
+  <span>Books</span>
+  <div class="flex items-center gap-2">
+    <%= resource_table_picker_for presenter: BookTablePresenter, table: @table %>
+    <%= link_to "+", new_book_path %>
+  </div>
+</div>
+<%= resource_table_for @books, presenter: BookTablePresenter, table: @table, picker: false %>
+```
+
+`resource_table_picker_for` resolves `resource:`/`presenter:`/`key:`/
+`layout:`/`table:` exactly as `resource_table_for` does — both funnel
+through the same private resolution method — so the two agree on the same
+key, and passing the identical `table:` to both, as above, guarantees one
+`Table` and one layout-store read for the request. Called *without*
+`table:`, `resource_table_picker_for` performs its own store read — fine for
+a picker rendered on its own, but a caller that also calls
+`resource_table_for` for the same collection should build the `Table` once
+and pass that same `table:` to each.
+
+The dropdown's alignment is placement-dependent: a right-aligned menu
+belongs to a trigger sitting at a right edge (a card header) and overflows
+off-screen hung off a trigger anywhere else (an earlier version of this
+picker sat at a card's bottom-left, where the same right-aligned menu
+rendered off the left edge of the viewport). `resource_table_picker_for`'s
+`class:` option — merged onto the dropdown wrapper's class list in place of
+the default — controls this, and defaults to `dropdown-end`.
 
 ## The ViewComponent position
 

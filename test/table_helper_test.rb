@@ -231,4 +231,99 @@ class TableHelperTest < ActionView::TestCase
     href = css_select("thead th[data-column='title'] a").first["href"]
     assert_match %r{\A/books\b}, href
   end
+
+  # --- picker: / resource_table_picker_for ---------------------------------
+  #
+  # The picker used to be hardcoded into _table.html.erb, immediately after
+  # the table's own scroll wrapper — a host had no way to place it anywhere
+  # else (e.g. a card header, beside a "+" button). picker: lets a host opt
+  # the inline picker out; resource_table_picker_for renders just the picker,
+  # resolving resource:/presenter:/key:/layout:/table: through the exact same
+  # private method resource_table_for uses, so the two agree on the same key
+  # and, when table: is passed to both, the identical Table.
+
+  test "picker: false suppresses the inline picker" do
+    render_result = resource_table_for(books, resource: BookResource, picker: false)
+
+    refute_includes render_result, "resource-table-picker"
+  end
+
+  test "picker: true (the default) still renders the inline picker" do
+    render_result = resource_table_for(books, resource: BookResource)
+
+    assert_includes render_result, "resource-table-picker"
+  end
+
+  test "resource_table_picker_for renders only the picker, not the table" do
+    render_result = resource_table_picker_for(resource: BookResource)
+
+    assert_includes render_result, "resource-table-picker"
+    refute_includes render_result, "<table"
+  end
+
+  test "resource_table_picker_for resolves the resource from a presenter, like resource_table_for" do
+    render_result = resource_table_picker_for(presenter: BookPresenter)
+
+    assert_includes render_result, 'data-table-layout-picker-key-value="TableHelperTest::BookResource/index"'
+  end
+
+  test "resource_table_picker_for raises when neither a resource nor a declaring presenter is given" do
+    error = assert_raises(ArgumentError) { resource_table_picker_for }
+
+    assert_match(/resource:/, error.message)
+  end
+
+  test "resource_table_picker_for and resource_table_for derive the same key for the same resource" do
+    table_result = resource_table_for(books, resource: BookResource)
+    picker_result = resource_table_picker_for(resource: BookResource)
+
+    assert_includes table_result, 'data-table-layout-key-value="TableHelperTest::BookResource/index"'
+    assert_includes picker_result, 'data-table-layout-picker-key-value="TableHelperTest::BookResource/index"'
+  end
+
+  test "resource_table_picker_for passing table: uses it instead of building one" do
+    table = ResourceTable::Table.new(
+      resource_class: BookResource,
+      layout: { "visible" => %w[title] },
+      params: {}
+    )
+
+    resource_table_picker_for(resource: BookResource, table: table)
+
+    assert css_select("input[type=checkbox][value='title']").first["checked"]
+    refute css_select("input[type=checkbox][value='pages']").first["checked"]
+  end
+
+  test "resource_table_picker_for passing table: performs no layout-store read" do
+    ResourceTable.config.layout_store = RaisingStore.new
+    table = ResourceTable::Table.new(resource_class: BookResource, layout: nil, params: {})
+
+    render_result = resource_table_picker_for(resource: BookResource, table: table)
+
+    assert_includes render_result, "resource-table-picker"
+  end
+
+  test "resource_table_picker_for without table: reads the layout store" do
+    ResourceTable.config.layout_store =
+      MemoryStore.new("TableHelperTest::BookResource/index" => { "visible" => %w[pages] })
+
+    resource_table_picker_for(resource: BookResource)
+
+    assert css_select("input[type=checkbox][value='pages']").first["checked"]
+    refute css_select("input[type=checkbox][value='title']").first["checked"]
+  end
+
+  test "resource_table_picker_for defaults the wrapper to dropdown-end" do
+    resource_table_picker_for(resource: BookResource)
+
+    assert_includes css_select(".resource-table-picker").first["class"], "dropdown-end"
+  end
+
+  test "resource_table_picker_for's class: overrides the wrapper's alignment" do
+    resource_table_picker_for(resource: BookResource, class: "dropdown-start")
+
+    wrapper_class = css_select(".resource-table-picker").first["class"]
+    assert_includes wrapper_class, "dropdown-start"
+    refute_includes wrapper_class, "dropdown-end"
+  end
 end

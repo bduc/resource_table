@@ -30,23 +30,17 @@ module ResourceTable
       # other action — url_for then resolves against *that* action's route
       # (a board-membership delete once produced a 404 sort link). Passing an
       # explicit path sidesteps route resolution entirely.
+      #
+      # picker: renders the "columns" picker immediately after the table
+      # (unchanged, historical placement) when true — the default, so no
+      # existing caller silently loses it. Pass false to render the table
+      # without it, and call resource_table_picker_for separately to place
+      # the picker wherever the host's own layout wants (e.g. a card header,
+      # beside a "+" button) instead of directly below the last row.
       def resource_table_for(collection, resource: nil, presenter: nil, key: nil,
-                             layout: nil, table: nil, sort_path: nil, **options, &block)
-        presenter_class = presenter || ResourceTable::Presenter
-        resource_class  = resource || presenter_class.resource || table&.resource_class
-
-        unless resource_class
-          raise ArgumentError,
-                "resource_table_for needs resource: <a ResourceCore::BaseResource subclass>, " \
-                "or a presenter: declaring one with `resource MyResource`"
-        end
-
-        key ||= ResourceTable.layout_key(resource_class)
-
-        table ||= begin
-          layout = resource_table_layout(key) if layout.nil?
-          ResourceTable::Table.new(resource_class: resource_class, layout: layout, params: params)
-        end
+                             layout: nil, table: nil, sort_path: nil, picker: true, **options, &block)
+        resource_class, presenter_class, key, table =
+          resolve_table_context(resource: resource, presenter: presenter, key: key, layout: layout, table: table)
 
         builder = ResourceTable::Builder.new
         block&.call(builder)
@@ -59,11 +53,68 @@ module ResourceTable
           ),
           actions: builder.actions_block,
           key: key,
-          sort_path: sort_path
+          sort_path: sort_path,
+          picker: picker
         }
       end
 
+      # Renders only the "columns" picker — the ☰ dropdown that toggles which
+      # columns of a resource_table are visible — so a host can place it
+      # wherever its own layout wants (typically a card header, beside the
+      # table's own "+" button) independently of where resource_table_for
+      # renders the table. Pair with picker: false on resource_table_for.
+      #
+      # Resolves resource:/presenter:/key:/layout:/table: exactly as
+      # resource_table_for does — both go through the same private
+      # #resolve_table_context — so the two agree on the same key and, when
+      # the same table: is passed to both, render against the identical
+      # Table object.
+      #
+      # IMPORTANT: called *without* table:, this helper performs its own
+      # layout-store read. A caller that also calls resource_table_for for
+      # the same collection should build one Table up front and pass that
+      # same table: to both, or the picker reads the store a second time for
+      # the same request.
+      #
+      # class: is merged onto the dropdown wrapper's class list in place of
+      # the default, and defaults to "dropdown-end" — a picker living at a
+      # right edge (a card header) needs its menu right-anchored to the
+      # trigger, or it overflows the viewport off the right; a picker placed
+      # elsewhere may need a different alignment (see _picker.html.erb).
+      def resource_table_picker_for(resource: nil, presenter: nil, key: nil, layout: nil, table: nil, **options)
+        _resource_class, _presenter_class, key, table =
+          resolve_table_context(resource: resource, presenter: presenter, key: key, layout: layout, table: table)
+
+        render partial: "resource_table/daisyui/table/picker",
+               locals: { table: table, key: key }.merge(options)
+      end
+
       private
+
+      # Shared by resource_table_for and resource_table_picker_for: resource:
+      # / presenter: / key: / layout: / table: all resolve the same way for
+      # both, so this is the one place that resolution lives rather than two
+      # copies drifting apart.
+      def resolve_table_context(resource:, presenter:, key:, layout:, table:)
+        presenter_class = presenter || ResourceTable::Presenter
+        resource_class  = resource || presenter_class.resource || table&.resource_class
+
+        unless resource_class
+          raise ArgumentError,
+                "resource_table_for/resource_table_picker_for needs resource: " \
+                "<a ResourceCore::BaseResource subclass>, or a presenter: declaring " \
+                "one with `resource MyResource`"
+        end
+
+        key ||= ResourceTable.layout_key(resource_class)
+
+        table ||= begin
+          layout = resource_table_layout(key) if layout.nil?
+          ResourceTable::Table.new(resource_class: resource_class, layout: layout, params: params)
+        end
+
+        [ resource_class, presenter_class, key, table ]
+      end
 
       def resource_table_layout(key)
         store = ResourceTable.layout_store
