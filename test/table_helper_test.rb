@@ -326,4 +326,28 @@ class TableHelperTest < ActionView::TestCase
     assert_includes wrapper_class, "dropdown-start"
     refute_includes wrapper_class, "dropdown-end"
   end
+
+  # --- wrapper_class: ----------------------------------------------------
+  #
+  # The scroll wrapper (`.resource-table-scroll`) is hardcoded to
+  # "overflow-x-auto resource-table-scroll". A host that wants it to also
+  # scroll vertically inside a bounded box (mira's /leden) needs to add
+  # classes to that same element without losing the defaults every other
+  # caller (the board tables) still relies on.
+
+  test "wrapper_class: is appended to the scroll wrapper's class list" do
+    render_result = resource_table_for(books, resource: BookResource, wrapper_class: "overflow-y-auto h-full")
+
+    wrapper = css_select(".resource-table-scroll").first
+    assert_includes wrapper["class"], "overflow-y-auto"
+    assert_includes wrapper["class"], "h-full"
+    assert_includes wrapper["class"], "overflow-x-auto"
+  end
+
+  test "omitting wrapper_class: renders the scroll wrapper exactly as before" do
+    render_result = resource_table_for(books, resource: BookResource)
+
+    wrapper = css_select(".resource-table-scroll").first
+    assert_equal "overflow-x-auto resource-table-scroll", wrapper["class"]
+  end
 end

@@ -591,6 +591,34 @@ class RenderingTest < ActionView::TestCase
     assert_equal 0, css_select("tbody td[data-column='title'] a").size
   end
 
+  # --- wrapper_class: -----------------------------------------------------
+  #
+  # _table.html.erb's own scroll wrapper is hardcoded to "overflow-x-auto
+  # resource-table-scroll". A host needing that box to also scroll
+  # vertically inside a bounded parent (mira's /leden) needs a way to add
+  # classes there without dropping the defaults every other caller relies on.
+
+  test "wrapper_class: is appended to the scroll wrapper" do
+    table = ResourceTable::Table.new(resource_class: resource)
+    render partial: "resource_table/daisyui/table/table", locals: {
+      table: table, collection: [ Book.new(title: "Dune", pages: 412, synopsis: "Sand.") ],
+      presenter: ResourceTable::Presenter.new(view_context: view),
+      actions: nil, key: "BookResource/index", wrapper_class: "overflow-y-auto h-full"
+    }
+    wrapper = css_select(".resource-table-scroll").first
+
+    assert_includes wrapper["class"], "overflow-x-auto"
+    assert_includes wrapper["class"], "overflow-y-auto"
+    assert_includes wrapper["class"], "h-full"
+  end
+
+  test "without wrapper_class: the scroll wrapper's class list is exactly the default" do
+    render_table
+
+    wrapper = css_select(".resource-table-scroll").first
+    assert_equal "overflow-x-auto resource-table-scroll", wrapper["class"]
+  end
+
   test "link: :self falls back to plain text, and does not raise, when the record has no route" do
     # Same exposure as _lookup_one: url_for(record) used to be called
     # unconditionally here too. Publisher has no route in the dummy app.

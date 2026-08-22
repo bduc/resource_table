@@ -1,6 +1,6 @@
 <%#
   Locals: table, collection, presenter, actions, key, sort_path (optional),
-  picker (optional, defaults to true)
+  picker (optional, defaults to true), wrapper_class (optional)
 
   The markup below is a contract with table_layout_controller.js — see §5 of
   docs/superpowers/specs/2026-08-21-resource-table-design.md. In particular the
@@ -18,8 +18,13 @@
   table). A host that wants the picker elsewhere (a card header, beside a
   "+" button) passes picker: false to resource_table_for and renders
   resource_table_picker_for separately, wherever its own layout wants it.
+
+  wrapper_class is appended (not substituted) onto the scroll wrapper's own
+  "overflow-x-auto resource-table-scroll", so a host can add e.g. vertical
+  scrolling and a bounded height without every existing caller's wrapper
+  changing shape.
 %>
-<div class="overflow-x-auto resource-table-scroll"
+<div class="overflow-x-auto resource-table-scroll<%= " #{local_assigns[:wrapper_class]}" if local_assigns[:wrapper_class].present? %>"
      data-controller="table-layout"
      data-table-layout-url-value="<%= ResourceTable.config.layout_url %>"
      data-table-layout-key-value="<%= key %>">

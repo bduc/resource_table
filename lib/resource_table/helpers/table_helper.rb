@@ -37,8 +37,15 @@ module ResourceTable
       # without it, and call resource_table_picker_for separately to place
       # the picker wherever the host's own layout wants (e.g. a card header,
       # beside a "+" button) instead of directly below the last row.
+      #
+      # wrapper_class: appended to the scroll wrapper's class list
+      # ("overflow-x-auto resource-table-scroll"), never replacing it — a
+      # host that needs that box to also scroll vertically inside a bounded
+      # parent (mira's /leden) can add e.g. "overflow-y-auto min-h-0" here
+      # without every other caller (the board tables) losing the defaults.
       def resource_table_for(collection, resource: nil, presenter: nil, key: nil,
-                             layout: nil, table: nil, sort_path: nil, picker: true, **options, &block)
+                             layout: nil, table: nil, sort_path: nil, picker: true,
+                             wrapper_class: nil, **options, &block)
         resource_class, presenter_class, key, table =
           resolve_table_context(resource: resource, presenter: presenter, key: key, layout: layout, table: table)
 
@@ -54,7 +61,8 @@ module ResourceTable
           actions: builder.actions_block,
           key: key,
           sort_path: sort_path,
-          picker: picker
+          picker: picker,
+          wrapper_class: wrapper_class
         }
       end
 

@@ -409,6 +409,27 @@ rendered off the left edge of the viewport). `resource_table_picker_for`'s
 `class:` option — merged onto the dropdown wrapper's class list in place of
 the default — controls this, and defaults to `dropdown-end`.
 
+## `wrapper_class:`
+
+The scroll wrapper `_table.html.erb` renders around the `<table>` is
+hardcoded to `overflow-x-auto resource-table-scroll` — enough for the table
+to scroll horizontally, sitting inside whatever height its parent gives it
+naturally. A host that wants that box bounded to a fixed height and
+scrolling vertically too (a full-viewport index page, say) passes
+`wrapper_class:`:
+
+```erb
+<%= resource_table_for @books, presenter: BookTablePresenter, wrapper_class: "overflow-y-auto min-h-0" %>
+```
+
+The classes are **appended**, never substituted — omit the option and the
+wrapper renders exactly as it always has (`overflow-x-auto
+resource-table-scroll`, nothing more), so every existing caller is
+unaffected. This is also what unlocks `.resource-table thead th`'s
+`position: sticky; top: 0`: sticky positioning resolves against the nearest
+*scrolling* ancestor, and without a bounded, overflowing wrapper there is no
+such ancestor for the header to pin against.
+
 ## The ViewComponent position
 
 Nothing here is a component, and that is a decision, not an oversight.
